@@ -1,3 +1,5 @@
+;; -*- coding: utf-8; lexical-binding: t -*-
+
 (require 'ert)
 (require 'ac-hxc)
 
@@ -74,4 +76,49 @@
   (should (let ((func-obj (make-defun-object
                            :name 'func)))
             (equal (add-funcall '((func arg1 arg2)) `(,func-obj))
-                   '((funcall func arg1 arg2))))))
+                   '((funcall func arg1 arg2)))))
+  (let ((func1 (make-defun-object
+                    :name 'func1))
+        (func2 (make-defun-object
+                    :name 'func2))
+        (func3 (make-defun-object
+                    :name 'func3)))
+    (should (equal (add-funcall
+                    '((letrec ((func1 (lambda () (func2 10))))
+                        (func3)))
+                    `(,func1 ,func2 ,func3))
+                   '((letrec ((func1 (lambda () (funcall func2 10))))
+                       (funcall func3)))))))
+
+(ert-deftest test-replace-symbol-expr ()
+  (should (eq (replace-symbol-expr '() '())
+              '()))
+  (should (equal (replace-symbol-expr '() '(+ 1 2))
+                 '(+ 1 2)))
+  (should (equal (replace-symbol-expr '(func) '(func arg1 arg2))
+                 '(funcall func arg1 arg2)))
+  (should (equal (replace-symbol-expr '(func1 func2)
+                                      '(func1 (func2 arg1 arg2) arg3))
+                 '(funcall func1 (funcall func2 arg1 arg2) arg3)))
+  (should (equal (replace-symbol-expr
+                  '(func)
+                  '(let ((func (lambda () (+ 1 2))))
+                                         (func)))
+                 '(let ((func (lambda () (+ 1 2))))
+                    (funcall func))))
+  (should (equal (replace-symbol-expr
+                  '(func)
+                  '(letrec ((func (lambda () (+ 1 2))))
+                     (func)))
+                 '(letrec ((func (lambda () (+ 1 2))))
+                    (funcall func))))
+  (should (equal (replace-symbol-expr
+                  '(func)
+                  '(progn (func)
+                          (func)
+                          end))
+                 '(progn
+                    (funcall func)
+                    (funcall func)
+                    end))))
+
