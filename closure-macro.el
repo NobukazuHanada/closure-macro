@@ -1,16 +1,13 @@
 ;; -*- coding: utf-8; lexical-binding: t -*-
 
 
-(defmacro defclosure-module (name args export-funcs &rest body)
+(defmacro defclosure-object (name args export-funcs &rest body)
   (let* ((defun-objects (get-defun-object body))
          (letrec-expr (defun-object-to-letrec-expr defun-objects))
          (mpc-closure (create-message-passing-closure export-funcs))
          (remove-defun (remove-defun-forms body))
          (not-funcall-expr (append letrec-expr remove-defun `(,mpc-closure)))
          (expr (add-funcall not-funcall-expr defun-objects)))
-    (print
-     `(progn (defun ,name ,args ,expr)
-             ,@(export-functions export-funcs)))
     `(progn (defun ,name ,args ,expr)
             ,@(export-functions export-funcs))))
 
@@ -33,17 +30,6 @@
 (defun create-msp-closure-call-func (export-func)
   `(defun ,export-func (obj &rest args)
      (apply obj (cons ',export-func args))))
-
-
-
-(defmacro defclosure-object (name args &rest body)
-  (let* ((defun-objects (get-defun-object body))
-         (letrec-expr (defun-object-to-letrec-expr defun-objects))
-         (not-funcall-expr (append letrec-expr (remove-defun-forms body)))
-         (expr (add-funcall not-funcall-expr defun-objects)))
-    `(defun ,name ,args
-       ,expr)))
-
 
 
 (defstruct defun-object
